@@ -60,6 +60,8 @@ void write(int address, bool value)
   set_address(address);
   digitalWrite(data_output_pin, value);
   set_write_mode();
+  // wait for write to complete
+  delayNanoseconds(MAX_DELAY_NS);
 }
 
 // collect errors into this int and display at end
