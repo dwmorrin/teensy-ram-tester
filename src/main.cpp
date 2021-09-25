@@ -1,14 +1,25 @@
 #include <Arduino.h>
 
+// see data sheet for read/write timing info
+// setting a delay that should give the RAM time to settle before read/write
+#define MAX_DELAY_NS 500
+
+// uncomment for serial console
+// #define USING_SERIAL_CONSOLE
+
 // using pins 0-11 for address
 // pin 12 is write enable
-// pin 13 is data from arudino to RAM
-// pin 14 is data from RAM to arudino (input)
+// pin 13 is data from Arduino to RAM
+// pin 14 is data from RAM to Arduino (input)
+// pin 15 is PASS LED
+// pin 16 is FAIL LED
 enum
 {
   write_enable_pin = 12,
   data_output_pin = 13,
-  data_input_pin = 14
+  data_input_pin = 14,
+  pass_led_pin = 15,
+  fail_led_pin = 16
 };
 
 // using simple error codes
@@ -31,8 +42,11 @@ void set_write_mode()
 
 void set_address(int address)
 {
+  set_read_mode();
   for (int i = 0; i < 12; i++)
     digitalWrite(i, address & (1 << i));
+  // wait for data to be stable
+  delayNanoseconds(MAX_DELAY_NS);
 }
 
 bool read(int address)
@@ -41,44 +55,49 @@ bool read(int address)
   return digitalRead(data_input_pin);
 }
 
+void write(int address, bool value)
+{
+  set_address(address);
+  digitalWrite(data_output_pin, value);
+  set_write_mode();
+}
+
+// collect errors into this int and display at end
+int error = NO_ERROR;
+
 void setup()
 {
-  // collect errors into this int and display at end
-  int error = NO_ERROR;
-
-  // set pin modes
-  for (int i = 0; i < data_input_pin; ++i)
+  // set pin modes; initialize pins
+  for (int i = 0; i <= fail_led_pin; ++i)
     pinMode(i, OUTPUT);
   pinMode(data_input_pin, INPUT);
+  digitalWrite(pass_led_pin, LOW);
+  digitalWrite(fail_led_pin, LOW);
 
   // write 0 to all addresses
-  set_address(0);
-  digitalWrite(data_output_pin, 0);
-  set_write_mode();
-  for (int i = 1; i < 4096; ++i)
-    set_address(i);
+  for (int i = 0; i < 4096; ++i)
+    write(i, 0);
 
   // check that all addresses are 0
   set_read_mode();
   for (int i = 0; i < 4096; ++i)
-    if (read(i) != 0)
+    if (read(i))
       error |= ZERO_READ_ERROR;
 
   // write 1 to all addresses
-  set_address(0);
-  digitalWrite(data_output_pin, 1);
-  set_write_mode();
   for (int i = 0; i < 4096; ++i)
-    set_address(i);
+    write(i, 1);
 
   // check that all addresses are 1
-  set_read_mode();
-  // check that all addresses are 1
   for (int i = 0; i < 4096; ++i)
-    if (read(i) != 1)
+    if (!read(i))
       error |= ONE_READ_ERROR;
 
-  // display error
+  // display pass/fail
+  digitalWrite(error ? fail_led_pin : pass_led_pin, HIGH);
+
+  // send more info to serial console
+#ifdef USING_SERIAL_CONSOLE
   Serial.begin(9600);
   Serial.println("error code:");
   Serial.println(error);
@@ -90,6 +109,7 @@ void setup()
   if (error & ONE_READ_ERROR)
     Serial.println("one read error");
   Serial.println("done");
+#endif
 }
 
 void loop()
@@ -97,6 +117,6 @@ void loop()
   // blink led to indicate done
   static bool led_is_on = false;
   led_is_on = !led_is_on;
-  digitalWrite(13, led_is_on);
+  digitalWrite(data_output_pin, led_is_on);
   delay(500);
 }
