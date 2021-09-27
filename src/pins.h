@@ -1,17 +1,18 @@
 #ifndef RAM_TESTER_PINS
 #define RAM_TESTER_PINS
-// using pins 0-11 for address
-// pin 12 is write enable
-// pin 13 is data from Arduino to RAM
-// pin 14 is data from RAM to Arduino (input)
-// pin 15 is PASS LED
-// pin 16 is FAIL LED
+#include <stdint.h>
+
+// using pins 7-18 for address, for breadboard wiring, see .fzz file
+const uint8_t address_pins[] = {
+    12, 11, 10, 9, 8, 7, 13, 14, 15, 16, 17, 18};
+
 enum
 {
-  write_enable_pin = 12,
-  data_output_pin = 13,
-  data_input_pin = 14,
-  pass_led_pin = 15,
-  fail_led_pin = 16
+  reset_prog_pin = 2,
+  pass_led_pin = 3,
+  fail_led_pin = 4,
+  data_input_pin = 5,   // RAM to Arduino
+  write_enable_pin = 6, // write = LOW, read = HIGH
+  data_output_pin = 19  // Arduino to RAM
 };
 #endif

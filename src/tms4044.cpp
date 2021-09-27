@@ -16,7 +16,7 @@ void set_address(int address)
 {
   set_read_mode();
   for (size_t i = 0; i < 12; i++)
-    digitalWrite(i, address & (1 << i));
+    digitalWrite(address_pins[i], address & (1 << i));
   // wait for data to be stable
   delayNanoseconds(MAX_DELAY_NS);
 }
